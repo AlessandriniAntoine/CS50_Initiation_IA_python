@@ -1,7 +1,9 @@
 import csv
 import sys
 
-from util import Node, StackFrontier, QueueFrontier
+########################
+# Data Functions
+########################
 
 # Maps names to a set of corresponding person_ids
 names = {}
@@ -51,38 +53,38 @@ def load_data(directory):
             except KeyError:
                 pass
 
+########################
+# Search Functions
+########################
 
-def main():
-    if len(sys.argv) > 2:
-        sys.exit("Usage: python degrees.py [directory]")
-    directory = sys.argv[1] if len(sys.argv) == 2 else "large"
+class Node():
+    
+    def __init__(self,state,parent,action):
+        self.state = state
+        self.parent = parent
+        self.action = action
 
-    # Load data from files into memory
-    print("Loading data...")
-    load_data(directory)
-    print("Data loaded.")
+class QueueFrontier():
 
-    source = person_id_for_name(input("Name: "))
-    if source is None:
-        sys.exit("Person not found.")
-    target = person_id_for_name(input("Name: "))
-    if target is None:
-        sys.exit("Person not found.")
+    def __init__(self):
+        self.frontier = []
 
-    path = shortest_path(source, target)
+    def add(self,node):
+        self.frontier.append(node)
 
-    if path is None:
-        print("Not connected.")
-    else:
-        degrees = len(path)
-        print(f"{degrees} degrees of separation.")
-        path = [(None, source)] + path
-        for i in range(degrees):
-            person1 = people[path[i][1]]["name"]
-            person2 = people[path[i + 1][1]]["name"]
-            movie = movies[path[i + 1][0]]["title"]
-            print(f"{i + 1}: {person1} and {person2} starred in {movie}")
+    def remove(self):
+        if self.empty():
+            raise Exception('empty frontier')
+        else:
+            node = self.frontier[0]
+            self.frontier = self.frontier[1:]
+            return node
 
+    def empty(self):
+        return len(self.frontier)==0
+
+    def contains_state(self,state):
+        return any(node.state == state for node in self.frontier)
 
 def shortest_path(source, target):
     """
@@ -91,9 +93,50 @@ def shortest_path(source, target):
 
     If no possible path, returns None.
     """
+    # Keep track of number of states explored
+    num_explored = 0
 
-    # TODO
-    raise NotImplementedError
+    # init frontier 
+    frontier = QueueFrontier()
+    node = Node(state = source,parent = None,action = None)
+    frontier.add(node)
+
+    # init explore set
+    exploredSet = set()
+
+    # Keep looking until solution found
+    while True:
+
+        # If nothing left in the frontier, then no path
+        if frontier.empty():
+            if node.state == target:
+                raise Exception('No solution')
+            else :
+                return None
+        
+        # choose a node from the frontier
+        node = frontier.remove()
+        num_explored += 1
+
+        if  node.state == target :
+            solution = []
+
+            # follow parent nodes to find solution
+            while node.parent is not None:
+                solution.append((node.action,node.state))
+                node = node.parent
+            solution.reverse()
+            return solution
+                
+        # mark node as explored
+        exploredSet.add(node.state)
+
+        # add neighbors to frontier
+        neighbors = neighbors_for_person(str(node.state))
+        for neighbor in neighbors:
+            if not frontier.contains_state(neighbor[1]) and neighbor[1] not in exploredSet:
+                child  = Node(state = neighbor[1],parent = node,action = neighbor[0])
+                frontier.add(child)
 
 
 def person_id_for_name(name):
@@ -134,6 +177,40 @@ def neighbors_for_person(person_id):
             neighbors.add((movie_id, person_id))
     return neighbors
 
+########################
+# Main Function
+########################
+
+def main():
+    if len(sys.argv) > 2:
+        sys.exit("Usage: python degrees.py [directory]")
+    directory = sys.argv[1] if len(sys.argv) == 2 else "large"
+
+    # Load data from files into memory
+    print("Loading data...")
+    load_data(directory)
+    print("Data loaded.")
+
+    source = person_id_for_name(input("Name: "))
+    if source is None:
+        sys.exit("Person not found.")
+    target = person_id_for_name(input("Name: "))
+    if target is None:
+        sys.exit("Person not found.")
+
+    path = shortest_path(source, target)
+
+    if path is None:
+        print("Not connected.")
+    else:
+        degrees = len(path)
+        print(f"{degrees} degrees of separation.")
+        path = [(None, source)] + path
+        for i in range(degrees):
+            person1 = people[path[i][1]]["name"]
+            person2 = people[path[i + 1][1]]["name"]
+            movie = movies[path[i + 1][0]]["title"]
+            print(f"{i + 1}: {person1} and {person2} starred in {movie}")
 
 if __name__ == "__main__":
     main()
