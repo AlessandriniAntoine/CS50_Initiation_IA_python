@@ -1,6 +1,8 @@
 import itertools
 import random
 
+from numpy import empty
+
 
 class Minesweeper():
     """
@@ -105,28 +107,35 @@ class Sentence():
         """
         Returns the set of all cells in self.cells known to be mines.
         """
-        raise NotImplementedError
+        if len(self.cells) == self.count:
+            return self.cells.copy()
+        return None
 
     def known_safes(self):
         """
         Returns the set of all cells in self.cells known to be safe.
         """
-        raise NotImplementedError
+        if self.count == 0:
+            return self.cells.copy()
+        return None
+
 
     def mark_mine(self, cell):
         """
         Updates internal knowledge representation given the fact that
         a cell is known to be a mine.
         """
-        raise NotImplementedError
+        if cell in self.cells:
+            self.cells.remove(cell)
+            self.count -=1
 
     def mark_safe(self, cell):
         """
         Updates internal knowledge representation given the fact that
         a cell is known to be safe.
         """
-        raise NotImplementedError
-
+        if cell in self.cells:
+            self.cells.remove(cell)
 
 class MinesweeperAI():
     """
@@ -182,7 +191,38 @@ class MinesweeperAI():
             5) add any new sentences to the AI's knowledge base
                if they can be inferred from existing knowledge
         """
-        raise NotImplementedError
+        # mark the cell as a move thas has been made
+        self.moves_made.add(cell)
+
+        # mark the cell as safe
+        self.mark_safe(cell)
+
+         # add a new sentence to the AI's knowledge base based on the value of `cell` and `count`
+        cells = []
+        for l in range(-1,2):
+            for p in range(-1,2):
+                if (self.height>(cell[0]+l)>=0) and (self.width>(cell[1]+p)>=0):
+                    cells.append((cell[0]+l,cell[1]+p))
+        cells = list(set(cells)-self.safes)
+        self.knowledge.append(Sentence(cells,count))
+
+         # mark any additional cells as safe or as mines if it can be concluded based on the AI's knowledge base
+        for sentence in self.knowledge:
+            if sentence.known_mines() is not None:
+                for item in sentence.known_mines():
+                    self.mark_mine(item)
+            if sentence.known_safes() is not None:                
+                for item in sentence.known_safes():
+                    self.mark_safe(item)
+
+         # add any new sentences to the AI's knowledge base if they can be inferred from existing knowledge
+        for sentence1 in self.knowledge:
+            for sentence2 in self.knowledge:
+                if sentence1!= sentence2 :
+                    if sentence1.cells.issubset(sentence2.cells):
+                        newSentence = Sentence(sentence2.cells.difference(sentence1.cells),sentence2.count-sentence1.count)
+                        self.knowledge.append(newSentence)
+                        self.knowledge.remove(sentence2)
 
     def make_safe_move(self):
         """
@@ -193,7 +233,10 @@ class MinesweeperAI():
         This function may use the knowledge in self.mines, self.safes
         and self.moves_made, but should not modify any of those values.
         """
-        raise NotImplementedError
+        possibleMoves = self.safes.difference(self.moves_made)
+        if len(possibleMoves) == 0:
+            return None
+        return random.choice(tuple(possibleMoves))
 
     def make_random_move(self):
         """
@@ -202,4 +245,15 @@ class MinesweeperAI():
             1) have not already been chosen, and
             2) are not known to be mines
         """
-        raise NotImplementedError
+        moves = set()
+        for i in range(self.height):
+            for j in range(self.width):
+                moves.add((i,j))
+        forbidenMoves = self.mines.union(self.moves_made)
+        possibleMoves = moves.difference(forbidenMoves)
+
+        if len(possibleMoves) == 0:
+            return None
+        else :
+            return random.choice(tuple(possibleMoves))
+        
