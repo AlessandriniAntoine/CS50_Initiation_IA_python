@@ -3,6 +3,7 @@ import random
 import re
 import sys
 
+
 DAMPING = 0.85
 SAMPLES = 10000
 
@@ -57,7 +58,18 @@ def transition_model(corpus, page, damping_factor):
     linked to by `page`. With probability `1 - damping_factor`, choose
     a link at random chosen from all pages in the corpus.
     """
-    raise NotImplementedError
+
+    numPages = len(corpus)
+    numLinks = len(corpus[page])
+
+    if numLinks == 0 :
+        return dict([(pages,1/numPages) for pages in corpus])
+
+    probabilityDistribution =  dict([(pages,(1-damping_factor)/numPages) for pages in corpus])
+    for linkPage in corpus[page]:
+        probabilityDistribution[linkPage] += damping_factor/numLinks
+
+    return probabilityDistribution
 
 
 def sample_pagerank(corpus, damping_factor, n):
@@ -69,8 +81,21 @@ def sample_pagerank(corpus, damping_factor, n):
     their estimated PageRank value (a value between 0 and 1). All
     PageRank values should sum to 1.
     """
-    raise NotImplementedError
 
+    appear = dict([(page,0) for page in corpus])
+    numPages = len(corpus)
+    
+    probabilites = dict([(page,1/numPages) for page in corpus])
+    sample = random.choices(list(probabilites.keys()), weights=probabilites.values(), k=1)
+    appear[sample[0]] +=1
+    
+    for _ in range(1,n):
+        probabilites = transition_model(corpus,sample[0],damping_factor)
+        sample = random.choices(list(probabilites.keys()), weights=probabilites.values(), k=1)
+        appear[sample[0]] +=1
+    
+
+    return dict([(key,value/n) for key,value in appear.items()])
 
 def iterate_pagerank(corpus, damping_factor):
     """
@@ -81,8 +106,37 @@ def iterate_pagerank(corpus, damping_factor):
     their estimated PageRank value (a value between 0 and 1). All
     PageRank values should sum to 1.
     """
-    raise NotImplementedError
 
+    numPages = len(corpus)
+
+    probabilities = dict([(page,1/numPages) for page in corpus])
+
+    while True:
+        newprobabilities = dict([(page,computeProba(corpus,page,probabilities,damping_factor)) for page in corpus])
+
+        difference = [newprobabilities[page]-probabilities[page] for page in probabilities]
+
+        if all(abs(i) <= 0.001 for i in difference):
+            break
+
+        probabilities = newprobabilities
+
+    return probabilities
+
+def computeProba(corpus,page,probabilities,damping_factor):
+    
+    numPages = len(corpus)
+
+    proba = (1-damping_factor)/numPages
+
+    for possiblePage in corpus:
+        if page in corpus[possiblePage]:
+            numLinks = len(corpus[possiblePage])
+            proba += damping_factor/numLinks*probabilities[possiblePage]
+        elif len(possiblePage) == 0 :
+            proba += 1/numPages
+
+    return proba
 
 if __name__ == "__main__":
     main()
