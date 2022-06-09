@@ -2,6 +2,8 @@ import csv
 import itertools
 import sys
 
+from numpy import true_divide
+
 PROBS = {
 
     # Unconditional probabilities for having gene
@@ -127,6 +129,37 @@ def powerset(s):
         )
     ]
 
+def getNumGene(person,one_gene,two_genes):
+    """
+    return the number of gene for a given person
+    """
+    if person in one_gene:
+        return 1
+    if person in two_genes:
+        return 2
+    return 0
+
+def probaGiveChild(numGene):
+    """
+    return the probability for someone to give his child the gene given his number of gene
+    """
+    if numGene == 0:
+        return 0.01 # probability that the gene mutate
+    if numGene == 1:
+        return 0.5 # same chance
+    if numGene == 2:
+        return 0.99 # 1-probability that the gene mutate
+
+def probaChild(numGene,probaFather,probaMother):
+    """
+    return the probability for a child to have a given number of gene given his father and mother probability to give the gene
+    """
+    if numGene == 0:
+        return (1-probaFather)*(1-probaMother) 
+    if numGene == 1:
+        return probaFather*(1-probaMother)+(1-probaFather)*probaMother
+    if numGene == 2:
+        return probaFather*probaMother
 
 def joint_probability(people, one_gene, two_genes, have_trait):
     """
@@ -139,7 +172,24 @@ def joint_probability(people, one_gene, two_genes, have_trait):
         * everyone in set `have_trait` has the trait, and
         * everyone not in set` have_trait` does not have the trait.
     """
-    raise NotImplementedError
+
+    jointProb = 1
+    for person in people :
+        numGene = getNumGene(person,one_gene,two_genes)
+        if people[person]['mother']==None:
+            probaGene = PROBS["gene"][numGene]
+        else :
+            fatherNumGene = getNumGene(people[person]['father'],one_gene,two_genes)
+            motherNumGene = getNumGene(people[person]['mother'],one_gene,two_genes)
+            probaGene = probaChild(numGene,probaGiveChild(fatherNumGene),probaGiveChild(motherNumGene))
+        if person in have_trait:
+            probaTrait = PROBS["trait"][numGene][True]
+        else:
+            probaTrait = PROBS["trait"][numGene][False]
+        
+        jointProb *= probaGene*probaTrait
+
+    return jointProb
 
 
 def update(probabilities, one_gene, two_genes, have_trait, p):
@@ -149,15 +199,34 @@ def update(probabilities, one_gene, two_genes, have_trait, p):
     Which value for each distribution is updated depends on whether
     the person is in `have_gene` and `have_trait`, respectively.
     """
-    raise NotImplementedError
+    updateProbabilities = probabilities.copy()
+    for person in probabilities:
+        numGene = getNumGene(person,one_gene,two_genes)
+        updateProbabilities[person]["gene"][numGene] += p 
+        if person in have_trait:
+            updateProbabilities[person]["trait"][True] += p 
+        else :
+            updateProbabilities[person]["trait"][False] += p 
 
+    probabilities.update(updateProbabilities)
 
 def normalize(probabilities):
     """
     Update `probabilities` such that each probability distribution
     is normalized (i.e., sums to 1, with relative proportions the same).
     """
-    raise NotImplementedError
+
+    updateProbabilities = probabilities.copy()
+    for person in probabilities:
+        geneFactor = 1/sum(probabilities[person]['gene'].values())
+        traitFactor = 1/sum(probabilities[person]['trait'].values())
+        for gene in probabilities[person]['gene']:
+            updateProbabilities[person]['gene'][gene] = probabilities[person]['gene'][gene]*geneFactor
+
+        for trait in probabilities[person]['trait']:
+            updateProbabilities[person]['trait'][trait] = probabilities[person]['trait'][trait]*traitFactor
+    
+    probabilities.update(updateProbabilities)
 
 
 if __name__ == "__main__":
