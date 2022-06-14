@@ -101,7 +101,9 @@ class NimAI():
         Return the Q-value for the state `state` and the action `action`.
         If no Q-value exists yet in `self.q`, return 0.
         """
-        raise NotImplementedError
+        if (tuple(state),action) in self.q:
+            return self.q[tuple(state),action]
+        return 0
 
     def update_q_value(self, state, action, old_q, reward, future_rewards):
         """
@@ -118,7 +120,22 @@ class NimAI():
         `alpha` is the learning rate, and `new value estimate`
         is the sum of the current reward and estimated future rewards.
         """
-        raise NotImplementedError
+        self.q[tuple(state),action] = old_q + self.alpha*((reward+future_rewards)-old_q)
+
+    def available_actions(self,state):
+        """
+        NimAI.available_actions(state) takes a `state` as input
+        and returns all of the available actions `(i, j)` in that state.
+
+        Action `(i, j)` represents the action of removing `j` items
+        from pile `i` (where piles are 0-indexed).
+        """
+
+        actions = set()
+        for i, pile in enumerate(state):
+            for j in range(1, pile + 1):
+                actions.add((i, j))
+        return actions
 
     def best_future_reward(self, state):
         """
@@ -130,7 +147,17 @@ class NimAI():
         Q-value in `self.q`. If there are no available actions in
         `state`, return 0.
         """
-        raise NotImplementedError
+        actions = self.available_actions(state)
+        if actions == set() :
+            return 0
+        best_reward = 0
+        for action in actions:
+            reward = self.get_q_value(state, action)
+            if reward > best_reward:
+                best_reward = reward
+        return best_reward
+
+
 
     def choose_action(self, state, epsilon=True):
         """
@@ -147,7 +174,23 @@ class NimAI():
         If multiple actions have the same Q-value, any of those
         options is an acceptable return value.
         """
-        raise NotImplementedError
+        actions = self.available_actions(state)
+        best_reward = 0
+        best_action = list(actions)[0]
+        for action in actions:
+            reward = self.get_q_value(state, action)
+            if reward > best_reward:
+                best_reward = reward
+                best_action = action
+        if not epsilon :
+            return best_action      
+        else :
+            random_action = random.choice(list(actions))
+            move =  random.choices([best_action,random_action],weights=(1-self.epsilon,self.epsilon))[0]
+            if move == random_action:
+                print("Random move")
+            return move
+
 
 
 def train(n):
@@ -250,7 +293,7 @@ def play(ai, human_player=None):
         # Have AI make a move
         else:
             print("AI's Turn")
-            pile, count = ai.choose_action(game.piles, epsilon=False)
+            pile, count = ai.choose_action(game.piles, epsilon=True)
             print(f"AI chose to take {count} from pile {pile}.")
 
         # Make move
