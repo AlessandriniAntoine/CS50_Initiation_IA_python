@@ -35,7 +35,7 @@ In this project, you’ll use TensorFlow to build a neural network to classify r
 
 Several such data sets exist, but for this project, we’ll use the German Traffic Sign Recognition Benchmark (GTSRB) dataset, which contains thousands of images of 43 different kinds of road signs.
 
-## Understanding
+## Understanding
 
 First, take a look at the data set by opening the gtsrb directory. You’ll notice 43 subdirectories in this dataset, numbered 0 through 42. Each numbered subdirectory represents a different category (a different type of road sign). Within each traffic sign’s directory is a collection of images of that type of traffic sign.
 
@@ -43,7 +43,7 @@ Next, take a look at traffic.py. In the main function, we accept as command-line
 
 The load_data and get_model functions are left to you to implement.
 
-Specification
+## Specification
 
 An automated tool assists the staff in enforcing the constraints in the below specification. Your submission will fail if any of these are not handled properly, if you import modules other than those explicitly allowed, or if you modify functions other than as permitted.
 
